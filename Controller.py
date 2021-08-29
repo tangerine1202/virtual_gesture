@@ -1,4 +1,4 @@
-import platform
+from utils import dotdict
 
 import numpy as np
 
@@ -7,12 +7,22 @@ import numpy as np
 from pynput import mouse as Mouse
 from pynput import keyboard as Keyboard
 
+import platform
+
+# Specific system import
+if platform.system() == 'Darwin':
+    # Mac screen info
+    from AppKit import NSScreen
+    # Execute applescript
+    from subprocess import Popen, PIPE
+elif platform.system() == 'Windows':
+    import tkinter as tk
 
 class Controller:
     def __init__(self):
         # system
         self.system = platform.system() if platform.system(
-        ) != 'Derwin' else 'Mac'  # rename Derwin to Mac
+        ) != 'Darwin' else 'Mac'  # rename Darwin to Mac
         if self.system == 'Mac':
             self._screen_width, self._screen_hight = self._get_Mac_info()
         elif self.system == 'Windows':
@@ -222,7 +232,7 @@ class Controller:
         )
 
     # utils
-    def _run_applescript(script_name):
+    def _run_applescript(self, script_name):
         APPLESCRIPT_CMD = dotdict({
             'switch_desktop_left': 'tell application "System Events" to key code 123 using control down',
             'switch_desktop_right': 'tell application "System Events" to key code 124 using control down',
@@ -241,11 +251,6 @@ class Controller:
         return p.returncode, stdout, stderr
 
     def _get_Mac_info(self):
-        # Mac screen info
-        from AppKit import NSScreen
-        # Execute applescript
-        from subprocess import Popen, PIPE
-
         SCREEN_INDEX = 0
         screen_width = NSScreen.screens()[SCREEN_INDEX].frame().size.width
         screen_hight = NSScreen.screens()[SCREEN_INDEX].frame().size.height
@@ -255,8 +260,6 @@ class Controller:
         # IMPROVE: may be better tool to get screen info. It supports multi monitor environments.
         # stackoverflow: https://stackoverflow.com/a/31171430
         # github: https://github.com/rr-/screeninfo
-
-        import tkinter as tk
 
         # screen info
         tk_root = tk.Tk()
