@@ -1,4 +1,5 @@
 from utils import dotdict
+import Hand
 
 import cv2
 import numpy as np
@@ -94,3 +95,36 @@ def draw_click_drag(img, landmarks, is_click, is_drag):
                    radius=7, thickness=1, color=COLOR.white)
         cv2.circle(img, p.astype(int),
                    radius=10, thickness=1, color=COLOR.white)
+
+
+def draw_3axis(img, rotation_matrix, delta_origin):
+    """
+    Parameters
+    ---
+    img : np.array
+      The image annotated to.
+    rotation_matrix : np.array
+      Rotation matrix used to transform.
+    delta_origin : np.array
+      Offset to original wrist.
+    """
+    start = Hand.Hand.reverse_landmarks_transformation(
+        [0, 0, 0], rotation_matrix, delta_origin)
+    x_end = Hand.Hand.reverse_landmarks_transformation(
+        [40, 0, 0], rotation_matrix, delta_origin)
+    y_end = Hand.Hand.reverse_landmarks_transformation(
+        [0, 40, 0], rotation_matrix, delta_origin)
+    z_end = Hand.Hand.reverse_landmarks_transformation(
+        [0, 0, 40], rotation_matrix, delta_origin)
+    cv2.arrowedLine(img, (start[0:2]).astype(
+        int), (x_end[0:2]).astype(int), thickness=2, color=COLOR.black)
+    cv2.arrowedLine(img, (start[0:2]).astype(
+        int), (y_end[0:2]).astype(int), thickness=2, color=COLOR.gray)
+    cv2.arrowedLine(img, (start[0:2]).astype(
+        int), (z_end[0:2]).astype(int), thickness=2, color=COLOR.blue)
+    cv2.putText(img, 'x', org=((x_end[0:2] + [5, 5]).astype(int)), color=COLOR.black,
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=.7, lineType=2)
+    cv2.putText(img, 'y', org=((y_end[0:2] + [5, 5]).astype(int)), color=COLOR.gray,
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=.7, lineType=2)
+    cv2.putText(img, 'z', org=((z_end[0:2] + [5, 5]).astype(int)), color=COLOR.blue,
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=.7, lineType=2)

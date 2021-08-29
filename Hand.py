@@ -111,10 +111,6 @@ class Hand:
             z_landmarks *= [self._image_width,
                             self._image_hight, self._image_depth]
 
-            # FUTURE: change coordinate
-            # z_shift_landmarks, rotation_matrix, delta_origin = shift_to_palm_coordinate(z_landmarks, handedness[0] > 0.5)
-            # landmarks_f.update(z_shift_landmarks.flatten())
-
             # flatten
             z_landmarks = z_landmarks.flatten()
 
@@ -142,6 +138,74 @@ class Hand:
         del self._landmarks_f
 
         self.build()
+
+    @staticmethod
+    def transform_to_palm_coordinate(landmarks, is_right_hand):
+        """
+        Using wrist as origin, vector from index-mcp to wrist as y-axis, cross vector of pinky-mcp to thumb and y-axis as z-axis
+
+        Parameters
+        ---
+        landmarks : np.array
+          Original landmarks.
+        is_right_hand : bool
+          Used to determine axis
+
+        Returns
+        ---
+        transformed_landmarks : np.array
+          transformed landmarks
+        rotation_matrix : np.array
+          Rotation matrix used to transform to new coordinate.
+          Needed to reverse transformation.
+        delta_origin : np.array
+          Offset of original wrist.
+          Needed to reverse transformation.
+        """
+        landmarks = np.array(landmarks)
+
+        # shift origin
+        delta_origin = np.copy(landmarks[0])
+        landmarks -= delta_origin
+
+        # calculate rotation matrix
+        axis_y = landmarks[0] - landmarks[5]
+        if is_right_hand:
+            axis_z = np.cross(landmarks[0] - landmarks[9], axis_y)
+        else:
+            axis_z = np.cross(axis_y, landmarks[0] - landmarks[9])
+        r = get_coordinate_rotation_matrix(
+            [axis_y, axis_z], [[0, 1, 0], [0, 0, 1]])
+
+        transformed_landmarks = landmarks @ r
+
+        return transformed_landmarks, r, delta_origin
+
+    @staticmethod
+    def reverse_landmarks_transformation(transformed_landmarks, rotation_matrix, delta_origin):
+        """
+        Transform landmarks back to original coordinate.
+
+        Parameters
+        ---
+        transformed_landmarks : np.array
+          landmarks needed to be transformed back.
+        rotation_matrix : np.array
+          Rotation matrix used to transform before.
+        delta_origin : np.array
+          Offset to original wrist.
+
+        Returns
+        ---
+        landmarks : np.array
+          reversed landmarks
+        """
+        transformed_landmarks = np.array(transformed_landmarks)
+
+        # NOTE: invsere of rotation matrix = transpose of rotation matrix
+        landmarks = transformed_landmarks @ rotation_matrix.T + delta_origin
+
+        return landmarks
 
     @property
     def existence_x(self):
