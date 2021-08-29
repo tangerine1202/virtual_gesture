@@ -93,8 +93,9 @@ class Hand:
         self._handedness_f.predict()
         self._landmarks_f.predict()
 
-    def update(self, z_existence, z_handedness=None, z_landmarks=None):
-        self._existence_f.update(z_existence)
+    def update(self, z_existence=None, z_handedness=None, z_landmarks=None):
+        if z_existence is not None:
+            self._existence_f.update(z_existence)
 
         if type(z_handedness) == np.ndarray and z_handedness.size != 0:
             self._handedness_f.update(z_handedness)
