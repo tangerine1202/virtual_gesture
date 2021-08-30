@@ -70,16 +70,45 @@ class Hand:
         lm_R_block = np.eye(3) * pos_R
         self._lm_R = block_diagonal_array(63//3, lm_R_block)
 
-    def build(self):
+    def build(self, z_existence=None, z_handedness=None, z_landmarks=None):
+        """
+        Build the filters (and saver) for hand tracking.
+
+        Parameters
+        ---
+        z_existence : scalar, None
+            Optional. Initial measurement of existence using to initialize observable state.
+        z_handedness : scalar, None
+            Optional. Initial measurement of handedness using to initialize observable state.
+        z_landmarks : np.array, None
+            Optional. Initial measurement of landmarks using to initialize observable state.
+        """
+        if z_existence is None:
+            existence_x = self._et_x
+        else:
+            assert np.isscalar(z_existence)
+            existence_x = [z_existence, self._et_x[1]]
+        if z_handedness is None:
+            handedness_x = self._hn_x
+        else:
+            assert np.isscalar(z_handedness)
+            handedness_x = [z_handedness, self._hn_x[1]]
+        if z_landmarks is None:
+            landmarks_x = self._lm_x
+        else:
+            assert z_landmarks.shape == (21, 3)
+            landmarks_x = np.stack(
+                [z_landmarks, self._lm_x.reshape(21, 3, 2)[:, :, 1]], axis=2).flatten()
+
         # Build existence filter
         self._existence_f = pos_vel_filter(
-            x=self._et_x, P=self._et_P, R=self._et_R, Q=self._et_Q, dt=self._dt)
+            x=existence_x, P=self._et_P, R=self._et_R, Q=self._et_Q, dt=self._dt)
         # Build handedness filter
         self._handedness_f = pos_vel_filter(
-            x=self._hn_x, P=self._hn_P, R=self._hn_R, Q=self._hn_Q, dt=self._dt)
+            x=handedness_x, P=self._hn_P, R=self._hn_R, Q=self._hn_Q, dt=self._dt)
         # Build landmarks filters
         self._landmarks_f = multi_pos_vel_filter(
-            self._lm_x, P=self._lm_P, R=self._lm_R, Q=self._lm_Q, dt=self._dt)
+            x=landmarks_x, P=self._lm_P, R=self._lm_R, Q=self._lm_Q, dt=self._dt)
 
         if 'existence' in self._should_saves:
             self._existence_s = Saver(self._existence_f)
@@ -302,7 +331,11 @@ if __name__ == '__main__':
     hand = Hand(720, 720, should_saves=['landmarks'])
     print('init successfully')
     hand.build()
-    print('build successfully')
+    print('build without initial measurement successfully')
+    hand.reset()
+    print('reset successfully')
+    hand.build(0, .5, np.arange(21*3).reshape(21, 3))
+    print('build with initial measurement successfully')
     hand.predict()
     print('predict successfully')
     hand.update(1, 1, np.arange(21*3).reshape(21, 3))
