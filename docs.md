@@ -1,5 +1,8 @@
 ![21 hand landmarks](https://google.github.io/mediapipe/images/mobile/hand_landmarks.png)
 
+## Config
+Setting length of your hand knuckles in milometer.
+
 ## Spec
 
 ### Tracking

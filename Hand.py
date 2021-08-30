@@ -1,3 +1,4 @@
+from config import REAL_BONES_LENGTH
 from utils import *
 
 import platform
@@ -54,7 +55,7 @@ class Hand:
         # landmarks Q
         pos_Q = (.25, .25, 1.25)
         vel_Q = (52.5, 54., 12.5)
-        Q_corr = self.__get_landmarks_Q_corr()
+        Q_corr = self._get_landmarks_Q_corr()
 
         # landmarks R
         # TODO: need update to image depth scale
@@ -135,11 +136,7 @@ class Hand:
             should_switch_hand = (self._handedness_f.x[0] > .5 and self._handedness_f.z < .5) or (
                 self._handedness_f.x[0] < .5 and self._handedness_f.z > .5)
             if should_switch_hand:
-                z_landmarks = self.__switch_hand(z_landmarks)
-
-            # scale to image size
-            z_landmarks *= [self._image_width,
-                            self._image_hight, self._image_depth]
+                z_landmarks = self._switch_hand(z_landmarks)
 
             # flatten
             z_landmarks = z_landmarks.flatten()
@@ -168,6 +165,24 @@ class Hand:
         del self._landmarks_f
 
         self.build()
+
+    # DEV:
+    @staticmethod
+    def match_real_bones_length(landmarks):
+        assert landmarks.shape == (21, 3)
+        res = np.empty_like(landmarks)
+        res[0] = landmarks[0]
+        for finger_name in REAL_BONES_LENGTH.keys():
+            index = REAL_BONES_LENGTH[finger_name]['index']
+            length = REAL_BONES_LENGTH[finger_name]['length']
+            for i in range(0, 4):
+                idx_from = index[i]
+                idx_to = index[i+1]
+                unit = (landmarks[idx_to] - landmarks[idx_from]) / \
+                    np.linalg.norm(landmarks[idx_to] - landmarks[idx_from])
+                res[idx_to] = res[idx_from] + unit * length[i]
+
+        return res
 
     @staticmethod
     def transform_to_palm_coordinate(landmarks, is_right_hand):
@@ -272,13 +287,13 @@ class Hand:
     def dt(self):
         return self._dt
 
-    def __switch_hand(self, landmarks):
+    def _switch_hand(self, landmarks):
         landmarks = np.array(landmarks)
         landmarks[[1, 2, 3, 4, 5, 6, 7, 8]] = landmarks[[
             17, 18, 19, 20, 13, 14, 15, 16]]
         return landmarks
 
-    def __get_landmarks_Q_corr(self):
+    def _get_landmarks_Q_corr(self):
         if platform.system() == 'Windows':
             return np.array([
                 [0.3511, 0.349, 0.0004],
