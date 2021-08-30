@@ -35,7 +35,15 @@ def draw_handedness(img, handedness):
                 lineType=2)
 
 
-def draw_landmarks(img, landmarks, color=(50, 255, 50)):
+def draw_landmarks(img, landmarks, color=COLOR.red, origin=None):
+    assert landmarks.shape == (21, 3)
+    if origin is None:
+        origin = landmarks[0, :]
+    else:
+        assert np.asanyarray(origin).shape == (3,)
+
+    landmarks = landmarks - landmarks[0, :]
+
     # draw connection
     pairs = []
     # wrist to index~pinky
@@ -52,15 +60,14 @@ def draw_landmarks(img, landmarks, color=(50, 255, 50)):
             pairs.append((i+j, i+j+1, c))
 
     for pp1, pp2, c in pairs:
-        p1 = landmarks[pp1, 0:2, 0]
-        p2 = landmarks[pp2, 0:2, 0]
+        p1 = landmarks[pp1, 0:2] + origin[0:2]
+        p2 = landmarks[pp2, 0:2] + origin[0:2]
         cv2.line(img, p1.astype(int), p2.astype(int), thickness=2, color=c)
 
     # draw dots
     for i in range(21):
-        p = landmarks[i, 0:2, 0]
-        cv2.circle(img, p.astype(int), radius=3,
-                   thickness=-1, color=COLOR.red)
+        p = landmarks[i, 0:2] + origin[0:2]
+        cv2.circle(img, p.astype(int), radius=3, thickness=-1, color=COLOR.red)
 
 
 def draw_finger_state(img, handedness, finger_states):

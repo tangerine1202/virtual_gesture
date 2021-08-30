@@ -57,7 +57,8 @@ class Hand:
         Q_corr = self.__get_landmarks_Q_corr()
 
         # landmarks R
-        pos_R = (.25, .25, .75)
+        # TODO: need update to image depth scale
+        pos_R = (1.5, 1.5, 5.)
 
         self._lm_x = np.tile(
             np.stack([pos_x, vel_x], axis=1), (21, 1, 1)).flatten()
@@ -123,10 +124,10 @@ class Hand:
         self._landmarks_f.predict()
 
     def update(self, z_existence=None, z_handedness=None, z_landmarks=None):
-        if z_existence is not None:
+        if np.isscalar(z_existence):
             self._existence_f.update(z_existence)
 
-        if type(z_handedness) == np.ndarray and z_handedness.size != 0:
+        if np.isscalar(z_handedness):
             self._handedness_f.update(z_handedness)
 
         if type(z_landmarks) == np.ndarray and z_landmarks.size != 0:
@@ -191,6 +192,7 @@ class Hand:
           Offset of original wrist.
           Needed to reverse transformation.
         """
+        assert landmarks.shape == (21, 3)
         landmarks = np.array(landmarks)
 
         # shift origin
