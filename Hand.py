@@ -9,7 +9,7 @@ np.set_printoptions(precision=4)
 
 
 class Hand:
-    def __init__(self, image_width, image_hight, should_saves=[]):
+    def __init__(self, image_width, image_hight, should_saves=[], MATCH_REAL_BONES_LEGNTH=False):
         """
         Parameters
         ----------
@@ -23,7 +23,6 @@ class Hand:
           Optionally, array of name of saved filters, allowed contain ['existence', 'handedness', 'landmarks']
         """
 
-        # FUTURE: may have a better scale factor
         self._image_width = image_width
         self._image_hight = image_hight
         self._image_depth = image_width
@@ -49,17 +48,25 @@ class Hand:
         # landmarks P
         pos_P = (self._image_width/2, self._image_hight /
                  2, self._image_depth/2)
-        vel_P = (self._image_width/2, self._image_hight /
-                 2, self._image_depth/2)
+        vel_P = (self._image_width/4, self._image_hight /
+                 4, self._image_depth/4)
 
         # landmarks Q
-        pos_Q = (.25, .25, 1.25)
-        vel_Q = (52.5, 54., 12.5)
-        Q_corr = self._get_landmarks_Q_corr()
+        if MATCH_REAL_BONES_LEGNTH:
+            pos_Q = (35., 40., 25.)
+            vel_Q = (700, 700., 100)
+            Q_corr = self._get_landmarks_Q_corr(MATCH_REAL_BONES_LEGNTH)
+        else:
+            pos_Q = (.25, .25, 1.25)
+            vel_Q = (52.5, 54., 12.5)
+            Q_corr = self._get_landmarks_Q_corr()
 
         # landmarks R
-        # TODO: need update to image depth scale
-        pos_R = (1.5, 1.5, 5.)
+        if MATCH_REAL_BONES_LEGNTH:
+            pos_R = (1.5, 1.5, 5.)
+        else:
+            # TODO: need update to image depth scale
+            pos_R = (2., 2., 5.)
 
         self._lm_x = np.tile(
             np.stack([pos_x, vel_x], axis=1), (21, 1, 1)).flatten()
@@ -293,7 +300,31 @@ class Hand:
             17, 18, 19, 20, 13, 14, 15, 16]]
         return landmarks
 
-    def _get_landmarks_Q_corr(self):
+    def _get_landmarks_Q_corr(self, MATCH_REAL_BONES_LENGTH=False):
+        if MATCH_REAL_BONES_LENGTH:
+            return np.array([
+                [0.3674, 0.2007, 0.0001],
+                [0.3467, 0.2538, 0.2373],
+                [0.4352, 0.248,  0.4594],
+                [0.6474, 0.2478, 0.6132],
+                [1.    , 0.3055, 0.7707],
+                [0.496,  0.2061, 0.4993],
+                [0.5867, 0.2266, 0.7067],
+                [0.6797, 0.4425, 0.8383],
+                [0.8009, 0.9155, 1.],
+                [0.499,  0.1951, 0.4528],
+                [0.5932, 0.248,  0.7334],
+                [0.6425, 0.5645, 0.838],
+                [0.6973, 1.    , 0.9354],
+                [0.508,  0.2001, 0.4582],
+                [0.6014, 0.2713, 0.7429],
+                [0.6377, 0.5462, 0.7993],
+                [0.6902, 0.9347, 0.8386],
+                [0.5273, 0.2152, 0.4503],
+                [0.5935, 0.2589, 0.6079],
+                [0.615,  0.3547, 0.6598],
+                [0.6642, 0.6032, 0.7364],
+            ])
         if platform.system() == 'Windows':
             return np.array([
                 [0.3511, 0.349, 0.0004],
