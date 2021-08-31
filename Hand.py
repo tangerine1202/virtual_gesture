@@ -53,8 +53,8 @@ class Hand:
 
         # landmarks Q
         if MATCH_REAL_BONES_LEGNTH:
-            pos_Q = (35., 40., 25.)
-            vel_Q = (700, 700., 100)
+            pos_Q = (35./3, 40./3, 25./3)
+            vel_Q = (750/3, 750/3, 500/3)
             Q_corr = self._get_landmarks_Q_corr(MATCH_REAL_BONES_LEGNTH)
         else:
             pos_Q = (.25, .25, 1.25)
@@ -63,10 +63,10 @@ class Hand:
 
         # landmarks R
         if MATCH_REAL_BONES_LEGNTH:
-            pos_R = (1.5, 1.5, 5.)
+            pos_R = (5., 5., 10.)
         else:
             # TODO: need update to image depth scale
-            pos_R = (2., 2., 5.)
+            pos_R = (1.5, 1.5, 5.)
 
         self._lm_x = np.tile(
             np.stack([pos_x, vel_x], axis=1), (21, 1, 1)).flatten()
