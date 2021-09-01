@@ -9,7 +9,7 @@ np.set_printoptions(precision=4)
 
 
 class Hand:
-    def __init__(self, image_width, image_hight, should_saves=[], MATCH_REAL_BONES_LEGNTH=False):
+    def __init__(self, image_width, image_hight, should_saves=[], MATCH_REAL_BONES_LENGTH=False):
         """
         Parameters
         ----------
@@ -28,6 +28,7 @@ class Hand:
         self._image_depth = image_width
 
         self._should_saves = should_saves
+        self.MATCH_REAL_BONES_LENGTH = MATCH_REAL_BONES_LENGTH
 
         self._dt = 1./15
 
@@ -52,20 +53,20 @@ class Hand:
                  4, self._image_depth/4)
 
         # landmarks Q
-        if MATCH_REAL_BONES_LEGNTH:
+        if self.MATCH_REAL_BONES_LENGTH:
             pos_Q = (35./3, 40./3, 25./3)
             vel_Q = (750/3, 750/3, 500/3)
-            Q_corr = self._get_landmarks_Q_corr(MATCH_REAL_BONES_LEGNTH)
+            Q_corr = self._get_landmarks_Q_corr()
         else:
+            # TODO: need update to image depth scale
             pos_Q = (.25, .25, 1.25)
             vel_Q = (52.5, 54., 12.5)
             Q_corr = self._get_landmarks_Q_corr()
 
         # landmarks R
-        if MATCH_REAL_BONES_LEGNTH:
+        if self.MATCH_REAL_BONES_LENGTH:
             pos_R = (5., 5., 10.)
         else:
-            # TODO: need update to image depth scale
             pos_R = (1.5, 1.5, 5.)
 
         self._lm_x = np.tile(
@@ -144,6 +145,9 @@ class Hand:
                 self._handedness_f.x[0] < .5 and self._handedness_f.z > .5)
             if should_switch_hand:
                 z_landmarks = self._switch_hand(z_landmarks)
+
+            if self.MATCH_REAL_BONES_LENGTH:
+                z_landmarks = self.match_real_bones_length(z_landmarks)
 
             # flatten
             z_landmarks = z_landmarks.flatten()
@@ -300,14 +304,14 @@ class Hand:
             17, 18, 19, 20, 13, 14, 15, 16]]
         return landmarks
 
-    def _get_landmarks_Q_corr(self, MATCH_REAL_BONES_LENGTH=False):
-        if MATCH_REAL_BONES_LENGTH:
+    def _get_landmarks_Q_corr(self):
+        if self.MATCH_REAL_BONES_LENGTH:
             return np.array([
                 [0.3674, 0.2007, 0.0001],
                 [0.3467, 0.2538, 0.2373],
                 [0.4352, 0.248,  0.4594],
                 [0.6474, 0.2478, 0.6132],
-                [1.    , 0.3055, 0.7707],
+                [1., 0.3055, 0.7707],
                 [0.496,  0.2061, 0.4993],
                 [0.5867, 0.2266, 0.7067],
                 [0.6797, 0.4425, 0.8383],
@@ -315,7 +319,7 @@ class Hand:
                 [0.499,  0.1951, 0.4528],
                 [0.5932, 0.248,  0.7334],
                 [0.6425, 0.5645, 0.838],
-                [0.6973, 1.    , 0.9354],
+                [0.6973, 1., 0.9354],
                 [0.508,  0.2001, 0.4582],
                 [0.6014, 0.2713, 0.7429],
                 [0.6377, 0.5462, 0.7993],
