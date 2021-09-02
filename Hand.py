@@ -30,7 +30,7 @@ class Hand:
         self._should_saves = should_saves
         self.MATCH_REAL_BONES_LENGTH = MATCH_REAL_BONES_LENGTH
 
-        self._dt = 1./15
+        self._dt = 1./13
 
         self._et_x = (.5, 0.)
         self._et_P = 1.
@@ -50,7 +50,7 @@ class Hand:
         pos_P = (self._image_width/2, self._image_hight /
                  2, self._image_depth/2)
         vel_P = (self._image_width/4, self._image_hight /
-                 4, self._image_depth/4)
+                 4, self._image_depth/2)
 
         # landmarks Q
         if self.MATCH_REAL_BONES_LENGTH:
@@ -59,15 +59,15 @@ class Hand:
             Q_corr = self._get_landmarks_Q_corr()
         else:
             # TODO: need update to image depth scale
-            pos_Q = (.25, .25, 1.25)
-            vel_Q = (52.5, 54., 12.5)
+            pos_Q = (4, 4, 4)
+            vel_Q = (12., 7., 7)
             Q_corr = self._get_landmarks_Q_corr()
 
         # landmarks R
         if self.MATCH_REAL_BONES_LENGTH:
             pos_R = (5., 5., 10.)
         else:
-            pos_R = (1.5, 1.5, 5.)
+            pos_R = (10, 7, 5.)
 
         self._lm_x = np.tile(
             np.stack([pos_x, vel_x], axis=1), (21, 1, 1)).flatten()
@@ -94,31 +94,31 @@ class Hand:
             Optional. Initial measurement of landmarks using to initialize observable state.
         """
         if z_existence is None:
-            existence_x = self._et_x
+            et_x = self._et_x
         else:
             assert np.isscalar(z_existence)
-            existence_x = [z_existence, self._et_x[1]]
+            et_x = [z_existence, self._et_x[1]]
         if z_handedness is None:
-            handedness_x = self._hn_x
+            hn_x = self._hn_x
         else:
             assert np.isscalar(z_handedness)
-            handedness_x = [z_handedness, self._hn_x[1]]
+            hn_x = [z_handedness, self._hn_x[1]]
         if z_landmarks is None:
-            landmarks_x = self._lm_x
+            lm_x = self._lm_x
         else:
             assert z_landmarks.shape == (21, 3)
-            landmarks_x = np.stack(
+            lm_x = np.stack(
                 [z_landmarks, self._lm_x.reshape(21, 3, 2)[:, :, 1]], axis=2).flatten()
 
         # Build existence filter
         self._existence_f = pos_vel_filter(
-            x=existence_x, P=self._et_P, R=self._et_R, Q=self._et_Q, dt=self._dt)
+            x=et_x, P=self._et_P, R=self._et_R, Q=self._et_Q, dt=self._dt)
         # Build handedness filter
         self._handedness_f = pos_vel_filter(
-            x=handedness_x, P=self._hn_P, R=self._hn_R, Q=self._hn_Q, dt=self._dt)
+            x=hn_x, P=self._hn_P, R=self._hn_R, Q=self._hn_Q, dt=self._dt)
         # Build landmarks filters
         self._landmarks_f = multi_pos_vel_filter(
-            x=landmarks_x, P=self._lm_P, R=self._lm_R, Q=self._lm_Q, dt=self._dt)
+            x=lm_x, P=self._lm_P, R=self._lm_R, Q=self._lm_Q, dt=self._dt)
 
         if 'existence' in self._should_saves:
             self._existence_s = Saver(self._existence_f)
@@ -145,6 +145,10 @@ class Hand:
                 self._handedness_f.x[0] < .5 and self._handedness_f.z > .5)
             if should_switch_hand:
                 z_landmarks = self._switch_hand(z_landmarks)
+
+            # calculate depth factor
+            depth_factor = self._calculate_depth_factor(z_landmarks)
+            z_landmarks = z_landmarks / depth_factor
 
             if self.MATCH_REAL_BONES_LENGTH:
                 z_landmarks = self.match_real_bones_length(z_landmarks)
@@ -177,7 +181,6 @@ class Hand:
 
         self.build()
 
-    # DEV:
     @staticmethod
     def match_real_bones_length(landmarks):
         assert landmarks.shape == (21, 3)
@@ -303,6 +306,20 @@ class Hand:
         landmarks[[1, 2, 3, 4, 5, 6, 7, 8]] = landmarks[[
             17, 18, 19, 20, 13, 14, 15, 16]]
         return landmarks
+
+    def _calculate_depth_factor(self, landmarks):
+        factors = np.array([])
+        for finger_name in REAL_BONES_LENGTH.keys():
+            index = REAL_BONES_LENGTH[finger_name]['index']
+            length = REAL_BONES_LENGTH[finger_name]['length']
+            for i in range(0, 4):
+                idx_from = index[i]
+                idx_to = index[i+1]
+                raw_length = np.linalg.norm(
+                    landmarks[idx_from, :] - landmarks[idx_to, :])
+                factor = raw_length / length[i]
+                factors = np.append(factors, factor)
+        return np.mean(factors)
 
     def _get_landmarks_Q_corr(self):
         if self.MATCH_REAL_BONES_LENGTH:
