@@ -31,6 +31,7 @@ class Hand:
         self.MATCH_REAL_BONES_LENGTH = MATCH_REAL_BONES_LENGTH
 
         self._dt = 1./13
+        self._depth_factor = 1
 
         self._et_x = (.5, 0.)
         self._et_P = 1.
@@ -59,7 +60,7 @@ class Hand:
             Q_corr = self._get_landmarks_Q_corr()
         else:
             # TODO: need update to image depth scale
-            pos_Q = (4, 4, 4)
+            pos_Q = (4., 4., 4.)
             vel_Q = (12., 7., 7)
             Q_corr = self._get_landmarks_Q_corr()
 
@@ -147,8 +148,8 @@ class Hand:
                 z_landmarks = self._switch_hand(z_landmarks)
 
             # calculate depth factor
-            depth_factor = self._calculate_depth_factor(z_landmarks)
-            z_landmarks = z_landmarks / depth_factor
+            self._depth_factor = self._calculate_depth_factor(z_landmarks)
+            z_landmarks = z_landmarks / self._depth_factor
 
             if self.MATCH_REAL_BONES_LENGTH:
                 z_landmarks = self.match_real_bones_length(z_landmarks)
@@ -300,6 +301,10 @@ class Hand:
     @property
     def dt(self):
         return self._dt
+
+    @property
+    def depth_factor(self):
+        return self._depth_factor
 
     def _switch_hand(self, landmarks):
         landmarks = np.array(landmarks)
