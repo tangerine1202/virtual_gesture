@@ -68,7 +68,7 @@ class Hand:
         if self.MATCH_REAL_BONES_LENGTH:
             pos_R = (5., 5., 10.)
         else:
-            pos_R = (10, 7, 5.)
+            pos_R = (10, 7, 15.)
 
         self._lm_x = np.tile(
             np.stack([pos_x, vel_x], axis=1), (21, 1, 1)).flatten()
@@ -149,7 +149,10 @@ class Hand:
 
             # calculate depth factor
             self._depth_factor = self._calculate_depth_factor(z_landmarks)
-            z_landmarks = z_landmarks / self._depth_factor
+            # z_landmarks = z_landmarks / self._depth_factor
+            origin = z_landmarks[0, :]
+            z_landmarks = (z_landmarks - origin) / self._depth_factor
+            z_landmarks += origin
 
             if self.MATCH_REAL_BONES_LENGTH:
                 z_landmarks = self.match_real_bones_length(z_landmarks)
