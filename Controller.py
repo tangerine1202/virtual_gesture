@@ -18,6 +18,7 @@ if platform.system() == 'Darwin':
 elif platform.system() == 'Windows':
     import tkinter as tk
 
+
 class Controller:
     def __init__(self):
         # system
@@ -114,6 +115,17 @@ class Controller:
         y = np.clip(
             y, 0 - self.mouse_position[1], self.screen_hight - self.mouse_position[1])
         self._mouse.move(x, y)
+
+    def mouse_move_position(self, x, y):
+        # Bound checking
+        # WARN:
+        # mouse may move to the negative position which used to refer to second monitor,
+        # but it also cause mouse move to non-monitor area, so I clip mouse position to
+        # keep it in the monitor area.
+        # FUTURE: support multi-monitor
+        x = np.clip(x, 0, self.screen_width)
+        y = np.clip(y, 0, self.screen_hight)
+        self._mouse.position = (x, y)
 
     def scroll(self, dx, dy):
         """
