@@ -1,36 +1,59 @@
-from FilterABC import PosVelFilter
+from filter.FilterABC import PosVelFilter
 from utils import *
 import time
 import math
 
 
 class OneEuroFilter(PosVelFilter):
-    def __init__(self, min_cutoff, beta, d_cutoff, x, dx=0., t=None, should_save=False):
-        if t is None:
-            t = time.time()
+    def __init__(self, min_cutoff=1., beta=0., d_cutoff=1., should_save=False):
+        """
+        Decreasing the minimum cutoff frequency decreases slow speed jitter. Increasing the speed coefficient decreases speed lag.
 
-        self.should_save = should_save
-
+        Parameters
+        --
+        min_cutoff: scalar
+            The minimum cutoff frequency.
+        beta: scalar
+            The speed coefficient.
+        """
         self.min_cutoff = np.float32(min_cutoff)
         self.beta = np.float32(beta)
         self.d_cutoff = np.float32(d_cutoff)
 
+        self.should_save = should_save
+
+    def build(self, x, dx=0., t=None):
+        if t is None:
+            t = time.time()
+        self._t_prev = t
+
         self._x_prev = np.array(x)
+
         if np.isscalar(dx):
             self._dx_prev = np.full_like(self._x_prev, dx)
         else:
             self._dx_prev = dx
-        self._t_prev = t
 
         self.saver = None
-        if should_save:
+        if self.should_save:
             self.saver = dotdict({})
             self.saver.z = np.array(self._x_prev)[np.newaxis, ...]
             self.saver.x = np.array(self._x_prev)[np.newaxis, ...]
             self.saver.dx = np.array(self._dx_prev)[np.newaxis, ...]
             self.saver.t = np.array([self._t_prev])
 
-    def predict(self):
+    def predict(self, t=None):
+        if t is None:
+            t = time.time()
+        dt = t - self._t_prev
+        x_hat = self._x_prev + dt*self._dx_prev
+        dx_hat = self._dx_prev
+
+        # Memorize the previous values.
+        self._s_z = None
+        self._x_prev = x_hat
+        self._dx_prev = dx_hat
+        self._t_prev = t
         pass
 
     def update(self, z, t=None):
@@ -85,8 +108,10 @@ class OneEuroFilter(PosVelFilter):
 
 if __name__ == '__main__':
     z = np.arange(21*3).reshape(21, 3)
-    oneeuro = OneEuroFilter(1., 1., 1., z, 0., should_save=True)
+    oneeuro = OneEuroFilter(1., 1., 1., should_save=True)
     print('init successfully')
+    oneeuro.build(z, 0.)
+    print('build successfully')
     oneeuro.predict()
     print('predict successfully')
     z = np.arange(1, 1+21*3).reshape(21, 3)

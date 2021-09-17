@@ -88,8 +88,9 @@ def draw_finger_state(img, handedness, finger_states):
 
 
 def draw_click_drag(img, landmarks, is_click, is_drag):
+    assert landmarks.shape == (21, 3)
     # index tip
-    p = landmarks[8, 0:2, 0]
+    p = landmarks[8, 0:2]
 
     # draw click
     if is_click:

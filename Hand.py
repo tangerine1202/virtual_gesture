@@ -1,3 +1,5 @@
+from filter.OneEuroFilter import OneEuroFilter
+from filter.KalmanFilter import KalmanPosVelFilter
 from config import REAL_BONES_LENGTH
 from utils import *
 
@@ -26,60 +28,72 @@ class Hand:
         self._image_width = image_width
         self._image_hight = image_hight
         self._image_depth = image_width
-
         self._should_saves = should_saves
         self.MATCH_REAL_BONES_LENGTH = MATCH_REAL_BONES_LENGTH
 
         self._dt = 1./13
         self._depth_factor = 1
 
+        # existence
         self._et_x = (.5, 0.)
         self._et_P = 1.
         self._et_R = .25
         self._et_Q = .5
+        self._existence_f = KalmanPosVelFilter(
+            dim_z=1, P=self._et_P, R=self._et_R, Q=self._et_Q, should_save='existence' in self._should_saves)
 
+        # handedness
         self._hn_x = (.5, 0.)
         self._hn_P = 1.
         self._hn_R = .3
         self._hn_Q = .5
+        self._handedness_f = KalmanPosVelFilter(
+            dim_z=1, P=self._hn_P, R=self._hn_R, Q=self._hn_Q, should_save='handedness' in self._should_saves)
 
+        # NOTE: landmarks -- KalmanFilter
+        """
         # landmarks x
-        pos_x = (self._image_width/2, self._image_hight/2, 0.)
-        vel_x = (0., 0., 0.)
-
+        # pos_x = (self._image_width/2, self._image_hight/2, 0.)
+        # vel_x = (0., 0., 0.)
+        # self._lm_x = np.tile(
+            # np.stack([pos_x, vel_x], axis=1), (21, 1, 1)).flatten()
         # landmarks P
         pos_P = (self._image_width/2, self._image_hight /
                  2, self._image_depth/2)
         vel_P = (self._image_width/4, self._image_hight /
                  4, self._image_depth/2)
-
+        self._lm_P = np.eye(
+            126) * np.tile(np.stack([pos_P, vel_P], axis=1), (21, 1, 1)).flatten()
         # landmarks Q
         if self.MATCH_REAL_BONES_LENGTH:
             pos_Q = (35./3, 40./3, 25./3)
             vel_Q = (750/3, 750/3, 500/3)
             Q_corr = self._get_landmarks_Q_corr()
         else:
-            # TODO: need update to image depth scale
             pos_Q = (4., 4., 4.)
             vel_Q = (12., 7., 7)
             Q_corr = self._get_landmarks_Q_corr()
-
+        lm_pos_Q = np.tile(pos_Q, [21, 1])
+        lm_vel_Q = vel_Q * Q_corr
+        self._lm_Q = np.eye(
+            126) * np.stack([lm_pos_Q, lm_vel_Q], axis=2).flatten()
         # landmarks R
         if self.MATCH_REAL_BONES_LENGTH:
             pos_R = (5., 5., 10.)
         else:
             pos_R = (10, 7, 15.)
-
-        self._lm_x = np.tile(
-            np.stack([pos_x, vel_x], axis=1), (21, 1, 1)).flatten()
-        self._lm_P = np.eye(
-            126) * np.tile(np.stack([pos_P, vel_P], axis=1), (21, 1, 1)).flatten()
-        lm_pos_Q = np.tile(pos_Q, [21, 1])
-        lm_vel_Q = vel_Q * Q_corr
-        self._lm_Q = np.eye(
-            126) * np.stack([lm_pos_Q, lm_vel_Q], axis=2).flatten()
         lm_R_block = np.eye(3) * pos_R
         self._lm_R = block_diagonal_array(63//3, lm_R_block)
+
+        self._landmarks_f = KalmanPosVelFilter(
+            dim_z=21*3, P=self._lm_P, R=self._lm_R, Q=self._lm_Q, should_save='landmarks' in self._should_saves)
+        """
+
+        # NOTE: landmarks -- OneEuroFilter
+        self._lm_x = np.tile(
+            (self._image_width/2, self._image_hight/2, 0.), 21)
+        self._landmarks_f = OneEuroFilter(
+            min_cutoff=10, beta=0, d_cutoff=1, should_save='landmarks' in self._should_saves)
 
     def build(self, z_existence=None, z_handedness=None, z_landmarks=None):
         """
@@ -108,25 +122,18 @@ class Hand:
             lm_x = self._lm_x
         else:
             assert z_landmarks.shape == (21, 3)
-            lm_x = np.stack(
-                [z_landmarks, self._lm_x.reshape(21, 3, 2)[:, :, 1]], axis=2).flatten()
+            # NOTE: Kalman Filter
+            # lm_x = np.stack(
+            # [z_landmarks, self._lm_x.reshape(21, 3, 2)[:, :, 1]], axis=2).flatten()
+            # NOTE: OneEuro Filter
+            lm_x = z_landmarks.flatten()
 
         # Build existence filter
-        self._existence_f = pos_vel_filter(
-            x=et_x, P=self._et_P, R=self._et_R, Q=self._et_Q, dt=self._dt)
+        self._existence_f.build(et_x)
         # Build handedness filter
-        self._handedness_f = pos_vel_filter(
-            x=hn_x, P=self._hn_P, R=self._hn_R, Q=self._hn_Q, dt=self._dt)
+        self._handedness_f.build(hn_x)
         # Build landmarks filters
-        self._landmarks_f = multi_pos_vel_filter(
-            x=lm_x, P=self._lm_P, R=self._lm_R, Q=self._lm_Q, dt=self._dt)
-
-        if 'existence' in self._should_saves:
-            self._existence_s = Saver(self._existence_f)
-        if 'handedness' in self._should_saves:
-            self._handedness_s = Saver(self._handedness_f)
-        if 'landmarks' in self._should_saves:
-            self._landmarks_s = Saver(self._landmarks_f)
+        self._landmarks_f.build(lm_x)
 
     def predict(self):
         self._existence_f.predict()
@@ -142,8 +149,8 @@ class Hand:
 
         if type(z_landmarks) == np.ndarray and z_landmarks.size != 0:
             # switch hand landmarks if the sensor detects wrong handedness
-            should_switch_hand = (self._handedness_f.x[0] > .5 and self._handedness_f.z < .5) or (
-                self._handedness_f.x[0] < .5 and self._handedness_f.z > .5)
+            should_switch_hand = (self._handedness_f.x[0] > .5 and z_handedness < .5) or (
+                self._handedness_f.x[0] < .5 and z_handedness > .5)
             if should_switch_hand:
                 z_landmarks = self._switch_hand(z_landmarks)
 
@@ -165,15 +172,16 @@ class Hand:
 
     def save(self):
         if 'existence' in self._should_saves:
-            self._existence_s.save()
+            self._existence_f.save()
         if 'handedness' in self._should_saves:
-            self._handedness_s.save()
+            self._handedness_f.save()
         if 'landmarks' in self._should_saves:
-            self._landmarks_s.save()
+            self._landmarks_f.save()
 
+    """
     def reset(self):
         if 'existence' in self._should_saves:
-            del self._existence_s
+            del self._existence_f
         if 'handedness' in self._should_saves:
             del self._handedness_s
         if 'landmarks' in self._should_saves:
@@ -184,6 +192,7 @@ class Hand:
         del self._landmarks_f
 
         self.build()
+    """
 
     @staticmethod
     def match_real_bones_length(landmarks):
@@ -281,25 +290,31 @@ class Hand:
 
     @property
     def landmarks_x(self):
-        return self._landmarks_f.x.reshape(21, 3, 2)
+        return self._landmarks_f.x.reshape(21, 3)
+
+    @property
+    def existence_dx(self):
+        return self._existence_f.dx
+
+    @property
+    def handedness_dx(self):
+        return self._handedness_f.dx
+
+    @property
+    def landmarks_dx(self):
+        return self._landmarks_f.dx.reshape(21, 3)
 
     @property
     def existence_s(self):
-        if hasattr(self, '_existence_s'):
-            return self._existence_s
-        return None
+        return self._existence_f.saver
 
     @property
     def handedness_s(self):
-        if hasattr(self, '_handedness_s'):
-            return self._handedness_s
-        return None
+        return self._handedness_f.saver
 
     @property
     def landmarks_s(self):
-        if hasattr(self, '_landmarks_s'):
-            return self._landmarks_s
-        return None
+        return self._landmarks_f.saver
 
     @property
     def dt(self):
@@ -409,8 +424,8 @@ if __name__ == '__main__':
     print('init successfully')
     hand.build()
     print('build without initial measurement successfully')
-    hand.reset()
-    print('reset successfully')
+    # hand.reset()
+    # print('reset successfully')
     hand.build(0, .5, np.arange(21*3).reshape(21, 3))
     print('build with initial measurement successfully')
     hand.predict()
@@ -432,8 +447,9 @@ if __name__ == '__main__':
     et_s = hand.existence_s
     hn_s = hand.handedness_s
     lm_s = hand.landmarks_s
-    assert et_s == None
-    assert hn_s == None
-    assert type(lm_s) == Saver
+    assert et_s is None
+    assert hn_s is None
+    assert lm_s is not None
+
     print(np.array(lm_s.x_post).shape)
     print('get s successfully')
