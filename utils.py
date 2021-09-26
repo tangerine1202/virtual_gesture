@@ -46,7 +46,7 @@ def angle_between_vectors(v1, v2):
 
 def orthogonal_projection(v1, v2):
     """
-    Project v1 onto v2 plane
+    Project vector v1 onto vector v2
     @return orthogonal_vector , orthogonal_complement
     https://ccjou.wordpress.com/2010/04/19/%E6%AD%A3%E4%BA%A4%E6%8A%95%E5%BD%B1-%E5%A8%81%E5%8A%9B%E5%BC%B7%E5%A4%A7%E7%9A%84%E4%BB%A3%E6%95%B8%E5%B7%A5%E5%85%B7/
     """
