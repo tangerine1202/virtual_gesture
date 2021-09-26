@@ -22,12 +22,13 @@ class OneEuroFilter(PosVelFilter):
 
         self.should_save = should_save
 
-    def build(self, x, dx=0., t=None):
+    def build(self, z, dx=0., t=None):
         if t is None:
             t = time.time()
         self._t_prev = t
 
-        self._x_prev = np.array(x)
+        self._z_prev = np.array(z)
+        self._x_prev = np.array(z)
 
         if np.isscalar(dx):
             self._dx_prev = np.full_like(self._x_prev, dx)
@@ -37,7 +38,7 @@ class OneEuroFilter(PosVelFilter):
         self.saver = None
         if self.should_save:
             self.saver = dotdict({})
-            self.saver.z = np.array(self._x_prev)[np.newaxis, ...]
+            self.saver.z = np.array(self._z_prev)[np.newaxis, ...]
             self.saver.x = np.array(self._x_prev)[np.newaxis, ...]
             self.saver.dx = np.array(self._dx_prev)[np.newaxis, ...]
             self.saver.t = np.array([self._t_prev])
@@ -50,7 +51,7 @@ class OneEuroFilter(PosVelFilter):
         dx_hat = self._dx_prev
 
         # Memorize the previous values.
-        self._s_z = None
+        self._z_prev = None
         self._x_prev = x_hat
         self._dx_prev = dx_hat
         self._t_prev = t
@@ -74,7 +75,7 @@ class OneEuroFilter(PosVelFilter):
         x_hat = self._exponential_smoothing(a, z, self._x_prev)
 
         # Memorize the previous values.
-        self._s_z = z
+        self._z_prev = z
         self._x_prev = x_hat
         self._dx_prev = dx_hat
         self._t_prev = t
@@ -82,13 +83,14 @@ class OneEuroFilter(PosVelFilter):
         return x_hat
 
     def save(self):
-        self.saver.z = np.concatenate(
-            [self.saver.z, self._s_z[np.newaxis, ...]], axis=0)
-        self.saver.x = np.concatenate(
-            [self.saver.x, self._x_prev[np.newaxis, ...]], axis=0)
-        self.saver.dx = np.concatenate(
-            [self.saver.dx, self._dx_prev[np.newaxis, ...]], axis=0)
-        self.saver.t = np.append(self.saver.t, self._t_prev)
+        if self.should_save:
+            self.saver.z = np.concatenate(
+                [self.saver.z, self._z_prev[np.newaxis, ...]], axis=0)
+            self.saver.x = np.concatenate(
+                [self.saver.x, self._x_prev[np.newaxis, ...]], axis=0)
+            self.saver.dx = np.concatenate(
+                [self.saver.dx, self._dx_prev[np.newaxis, ...]], axis=0)
+            self.saver.t = np.append(self.saver.t, self._t_prev)
 
     @property
     def x(self):
