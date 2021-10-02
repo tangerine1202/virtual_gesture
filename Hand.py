@@ -1,7 +1,7 @@
 from filter.OneEuroFilter import OneEuroFilter
 from filter.KalmanFilter import KalmanPosVelFilter
 from config import REAL_BONES_LENGTH
-from utils import *
+from lib.utils import *
 
 import platform
 import numpy as np
@@ -11,8 +11,9 @@ np.set_printoptions(precision=4)
 
 
 class Hand:
-    def __init__(self, image_width, image_hight, should_saves=[], MATCH_REAL_BONES_LENGTH=False):
+    def __init__(self, image_width, image_hight, dt, should_saves=[], MATCH_REAL_BONES_LENGTH=False):
         """
+        TODO: Pass filters in rather than construct filter inside class. This class handles filters' parameter updating. This class handles filters' parameter updating.
         Parameters
         ----------
         image_width : scalar
@@ -31,7 +32,7 @@ class Hand:
         self._should_saves = should_saves
         self.MATCH_REAL_BONES_LENGTH = MATCH_REAL_BONES_LENGTH
 
-        self._dt = 1./13
+        self._dt = dt
         self._depth_factor = 1
 
         # existence
@@ -53,10 +54,9 @@ class Hand:
         # NOTE: landmarks -- KalmanFilter
         """
         # landmarks x
-        # pos_x = (self._image_width/2, self._image_hight/2, 0.)
-        # vel_x = (0., 0., 0.)
-        # self._lm_x = np.tile(
-            # np.stack([pos_x, vel_x], axis=1), (21, 1, 1)).flatten()
+        pos_x = (self._image_width/2, self._image_hight/2, 0.)
+        vel_x = (0., 0., 0.)
+        self._lm_x = np.tile( np.stack([pos_x, vel_x], axis=1), (21, 1, 1)).flatten()
         # landmarks P
         pos_P = (self._image_width/2, self._image_hight /
                  2, self._image_depth/2)
@@ -93,7 +93,7 @@ class Hand:
         self._lm_x = np.tile(
             (self._image_width/2, self._image_hight/2, 0.), 21)
         self._landmarks_f = OneEuroFilter(
-            min_cutoff=10, beta=0, d_cutoff=1, should_save='landmarks' in self._should_saves)
+            min_cutoff=.2, beta=.03, d_cutoff=1., should_save='landmarks' in self._should_saves)
 
     def build(self, z_existence=None, z_handedness=None, z_landmarks=None):
         """

@@ -1,4 +1,4 @@
-from utils import dotdict
+from lib.utils import dotdict
 
 import numpy as np
 

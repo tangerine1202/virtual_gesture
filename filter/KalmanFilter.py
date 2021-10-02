@@ -1,4 +1,4 @@
-from utils import block_diagonal_array
+from lib.math_utils import block_diagonal_array
 from filter.FilterABC import PosVelFilter
 import numpy as np
 # various filter: https://filterpy.readthedocs.io/en/latest/

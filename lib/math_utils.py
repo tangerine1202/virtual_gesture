@@ -2,16 +2,6 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 
 
-class dotdict(dict):
-    """
-    dot.notation access to dictionary attributes
-    https://stackoverflow.com/a/23689767
-    """
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-
 def block_diagonal_array(n, block):
     """
     Returns block diagonal array

@@ -1,7 +1,8 @@
 from filter.FilterABC import PosVelFilter
-from utils import *
+from lib.utils import *
 import time
 import math
+import numpy as np
 
 
 class OneEuroFilter(PosVelFilter):
