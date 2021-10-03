@@ -1,4 +1,5 @@
-from lib.math_utils import block_diagonal_array
+# FIXME: import from upper level folder
+# from lib.math_utils import block_diagonal_array
 from filter.FilterABC import PosVelFilter
 import numpy as np
 # various filter: https://filterpy.readthedocs.io/en/latest/
@@ -59,11 +60,8 @@ class KalmanPosVelFilter(PosVelFilter):
         self.filter.update(z)
 
     def save(self):
-        if self.should_save == False:
-            print(
-                "Warning: initial filter with `should_save=False`, but calling `save()`")
-            return
-        self.saver.save()
+        if self.should_save:
+            self.saver.save()
 
     @property
     def x(self):

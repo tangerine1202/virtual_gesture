@@ -10,13 +10,14 @@ class PosVelFilter(ABC):
         pass
 
     @abstractmethod
-    def build(self, z=None):
+    def build(self, z=None, dz=None):
         """
         Build the filter.
 
         Parameters
         ---
         z: np.array(), None
+        dz: np.array(), None
         The first measurement.
         """
         pass
@@ -29,7 +30,7 @@ class PosVelFilter(ABC):
         pass
 
     @abstractmethod
-    def update(self, z):
+    def update(self, z, dz):
         """
         Update the estimate with measurement.
         """

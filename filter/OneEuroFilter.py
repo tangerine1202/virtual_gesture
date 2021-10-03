@@ -64,6 +64,8 @@ class OneEuroFilter(PosVelFilter):
         z = np.asanyarray(z)
 
         dt = t - self._t_prev
+        if dt == 0:
+            dt = 1e-8
 
         # The filtered derivative of the signal.
         a_d = self._smoothing_factor(dt, self.d_cutoff)
